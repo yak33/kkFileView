@@ -27,5 +27,8 @@ nbdist/
 .vscode/
 .DS_Store
 
+### Claude Code ###
+.claude/
+
 server/src/main/cache/
 server/src/main/file/
