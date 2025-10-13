@@ -300,6 +300,11 @@
 
         $("#fileUploadBtn").click(function () {
             var filepath = $("#file").val();
+            // 检查是否选择了文件
+            if (!filepath || filepath.trim() === "") {
+                alert('请先选择要上传的文件');
+                return false;
+            }
             if(!checkFileSize(filepath)) {
                 return false;
             }
@@ -341,6 +346,11 @@
                 img.src = filepath;
                 filesize = img.fileSize;
             } else {
+                // 检查是否选择了文件
+                if (!$("#file")[0].files || $("#file")[0].files.length === 0) {
+                    alert("请先选择要上传的文件");
+                    return false;
+                }
                 filesize = $("#file")[0].files[0].size; //byte
             }
             if (filesize > 0 && filesize > maxsize) {
@@ -351,7 +361,8 @@
                 return false;
             }
         } catch (e) {
-            alert("上传失败，请重试");
+            console.error("文件检查异常:", e);
+            alert("文件检查失败，请确保已选择文件");
             return false;
         }
         return true;
