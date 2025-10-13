@@ -121,10 +121,14 @@ public class FileController {
         }
         
         try {
-            // 创建demo目录
-            File demoFolder = new File(fileDir + demoPath);
+            // 创建demo目录，获取规范化的绝对路径
+            File demoFolder = new File(fileDir + demoPath).getAbsoluteFile().getCanonicalFile();
             if (!demoFolder.exists()) {
-                demoFolder.mkdirs();
+                boolean created = demoFolder.mkdirs();
+                if (!created) {
+                    logger.error("创建目录失败：{}", demoFolder.getAbsolutePath());
+                    return ReturnResponse.failure("创建目录失败");
+                }
             }
             
             // 生成唯一文件名（添加时间戳避免重复）
@@ -134,12 +138,17 @@ public class FileController {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
             String uniqueFileName = fileNameWithoutExt + "_" + sdf.format(new Date()) + ext;
             
-            // 保存文件
-            String savePath = fileDir + demoPath + uniqueFileName;
-            File destFile = new File(savePath);
-            file.transferTo(destFile);
+            // 保存文件 - 使用规范化的绝对路径
+            File destFile = new File(demoFolder, uniqueFileName).getCanonicalFile();
+            logger.info("准备保存文件到：{}", destFile.getAbsolutePath());
             
-            logger.info("文件上传成功：{}", savePath);
+            // 使用字节流直接写入文件
+            try (InputStream inputStream = file.getInputStream();
+                 OutputStream outputStream = Files.newOutputStream(destFile.toPath())) {
+                StreamUtils.copy(inputStream, outputStream);
+            }
+            
+            logger.info("文件上传成功：{}", destFile.getAbsolutePath());
             return ReturnResponse.success("文件上传成功：" + uniqueFileName);
         } catch (IOException e) {
             logger.error("文件上传失败", e);
