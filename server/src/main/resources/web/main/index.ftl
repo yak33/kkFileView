@@ -70,7 +70,7 @@
             <li class="active"><a href="./index">首页</a></li>
             <li><a href="./integrated">接入说明</a></li>
             <li><a href="./record">版本发布记录</a></li>
-            <li><a href="./sponsor">赞助开源</a></li>
+<#--            <li><a href="./sponsor">赞助开源</a></li>-->
         </ul>
     </div>
 </nav>
@@ -79,7 +79,7 @@
     <#--  接入说明  -->
     <div class="page-header">
         <h1>支持的文件类型</h1>
-        我们一直在扩展支持的文件类型，不断优化预览的效果，如果您有什么建议，欢迎在kk开源社区留意反馈：<a target='_blank' href="https://t.zsxq.com/09ZHSXbsQ">https://t.zsxq.com/09ZHSXbsQ</a>。
+        我们一直在扩展支持的文件类型，不断优化预览的效果，感谢您的支持！</a>。
     </div>
     <div >
         <ol>
@@ -148,6 +148,18 @@
                     <input type="file" id="file" name="file" style="float: left; margin: 0 auto; font-size:22px;" placeholder="请选择文件"/>
                     <input type="button" id="fileUploadBtn" class="btn btn-success" value=" 上 传 "/>
                 </form>
+            <#else>
+                <div style="padding: 20px; margin: 10px 0; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+                    <p style="margin: 0; color: #6c757d; font-size: 16px;">
+                        文件上传功能默认已禁用。如需开启，请通过以下方式配置：
+                        <br/>
+                        • 配置文件：<code>file.upload.disable=false</code>
+                        <br/>
+                        • 环境变量：<code>KK_FILE_UPLOAD_DISABLE=false</code>
+                        <br/>
+                        <strong style="color: #dc3545;">请注意：文件上传限开发环境调试使用，生产环境建议保持关闭状态，避免非法上传导致的安全隐患。</strong>
+                    </p>
+                </div>
             </#if>
             <table id="table" data-pagination="true"></table>
         </div>
@@ -300,11 +312,6 @@
 
         $("#fileUploadBtn").click(function () {
             var filepath = $("#file").val();
-            // 检查是否选择了文件
-            if (!filepath || filepath.trim() === "") {
-                alert('请先选择要上传的文件');
-                return false;
-            }
             if(!checkFileSize(filepath)) {
                 return false;
             }
@@ -346,11 +353,6 @@
                 img.src = filepath;
                 filesize = img.fileSize;
             } else {
-                // 检查是否选择了文件
-                if (!$("#file")[0].files || $("#file")[0].files.length === 0) {
-                    alert("请先选择要上传的文件");
-                    return false;
-                }
                 filesize = $("#file")[0].files[0].size; //byte
             }
             if (filesize > 0 && filesize > maxsize) {
@@ -361,8 +363,7 @@
                 return false;
             }
         } catch (e) {
-            console.error("文件检查异常:", e);
-            alert("文件检查失败，请确保已选择文件");
+            alert("上传失败，请重试");
             return false;
         }
         return true;

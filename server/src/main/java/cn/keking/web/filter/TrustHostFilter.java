@@ -4,16 +4,15 @@ import cn.keking.config.ConfigConstants;
 import cn.keking.utils.WebUtils;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,39 +32,22 @@ public class TrustHostFilter implements Filter {
     public void init(FilterConfig filterConfig) {
         ClassPathResource classPathResource = new ClassPathResource("web/notTrustHost.html");
         try {
+            classPathResource.getInputStream();
             byte[] bytes = FileCopyUtils.copyToByteArray(classPathResource.getInputStream());
             this.notTrustHostHtmlView = new String(bytes, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            e.printStackTrace();
-            // 如果读取失败，提供默认的 HTML 内容
-            this.notTrustHostHtmlView = "<html><body><h1>Access Denied</h1><p>Host ${current_host} is not trusted.</p></body></html>";
+            logger.error("Failed to load notTrustHost.html file", e);
         }
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         String url = WebUtils.getSourceUrl(request);
-        
-        // 如果 URL 仍然是 URL 编码的，需要先解码
-        if (url != null && url.contains("%")) {
-            try {
-                url = URLDecoder.decode(url, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                logger.error("TrustHostFilter - URL解码失败", e);
-            }
-        }
-        
+        logger.info("访问的url: {}", url);
         String host = WebUtils.getHost(url);
-        
-        if (host == null) {
-            host = "unknown";
-        }
-        
+        logger.info("访问的host: {}", host);
+        assert host != null;
         if (isNotTrustHost(host)) {
-            // 防御性检查，确保 notTrustHostHtmlView 不为 null
-            if (this.notTrustHostHtmlView == null) {
-                this.notTrustHostHtmlView = "<html><body><h1>Access Denied</h1><p>Host ${current_host} is not trusted.</p></body></html>";
-            }
             String html = this.notTrustHostHtmlView.replace("${current_host}", host);
             response.getWriter().write(html);
             response.getWriter().close();
@@ -75,13 +57,25 @@ public class TrustHostFilter implements Filter {
     }
 
     public boolean isNotTrustHost(String host) {
+        // 如果配置了黑名单，优先检查黑名单
         if (CollectionUtils.isNotEmpty(ConfigConstants.getNotTrustHostSet())) {
             return ConfigConstants.getNotTrustHostSet().contains(host);
         }
+
+        // 如果配置了白名单，检查是否在白名单中
         if (CollectionUtils.isNotEmpty(ConfigConstants.getTrustHostSet())) {
+            // 支持通配符 * 表示允许所有主机
+            if (ConfigConstants.getTrustHostSet().contains("*")) {
+                logger.debug("允许所有主机访问（通配符模式）: {}", host);
+                return false;
+            }
             return !ConfigConstants.getTrustHostSet().contains(host);
         }
-        return false;
+
+        // 安全加固：默认拒绝所有未配置的主机（防止SSRF攻击）
+        // 如果需要允许所有主机，请在配置文件中明确设置 trust.host = *
+        logger.warn("未配置信任主机列表，拒绝访问主机: {}，请在配置文件中设置 trust.host 或 KK_TRUST_HOST 环境变量", host);
+        return true;
     }
 
     @Override

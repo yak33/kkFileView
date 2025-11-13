@@ -19,20 +19,17 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.awt.image.BufferedImage;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +53,77 @@ public class FileController {
     private final String demoPath = demoDir + File.separator;
     public static final String BASE64_DECODE_ERROR_MSG = "Base64解码失败，请检查你的 %s 是否采用 Base64 + urlEncode 双重编码了！";
 
+    @PostMapping("/fileUpload")
+    public ReturnResponse<Object> fileUpload(@RequestParam("file") MultipartFile file) {
+        ReturnResponse<Object> checkResult = this.fileUploadCheck(file);
+        if (checkResult.isFailure()) {
+            return checkResult;
+        }
+        File outFile = new File(fileDir + demoPath);
+        if (!outFile.exists() && !outFile.mkdirs()) {
+            logger.error("创建文件夹【{}】失败，请检查目录权限！", fileDir + demoPath);
+        }
+        String fileName = checkResult.getContent().toString();
+        logger.info("上传文件：{}{}{}", fileDir, demoPath, fileName);
+        try (InputStream in = file.getInputStream(); OutputStream out = Files.newOutputStream(Paths.get(fileDir + demoPath + fileName))) {
+            StreamUtils.copy(in, out);
+            return ReturnResponse.success(null);
+        } catch (IOException e) {
+            logger.error("文件上传失败", e);
+            return ReturnResponse.failure();
+        }
+    }
+
+    @GetMapping("/deleteFile")
+    public ReturnResponse<Object> deleteFile(HttpServletRequest request, String fileName, String password) {
+        ReturnResponse<Object> checkResult = this.deleteFileCheck(request, fileName, password);
+        if (checkResult.isFailure()) {
+            return checkResult;
+        }
+        fileName = checkResult.getContent().toString();
+        File file = new File(fileDir + demoPath + fileName);
+        logger.info("删除文件：{}", file.getAbsolutePath());
+        if (file.exists() && !file.delete()) {
+            String msg = String.format("删除文件【%s】失败，请检查目录权限！", file.getPath());
+            logger.error(msg);
+            return ReturnResponse.failure(msg);
+        }
+        WebUtils.removeSessionAttr(request, CAPTCHA_CODE); //删除缓存验证码
+        return ReturnResponse.success();
+    }
+
+    /**
+     * 验证码方法
+     */
+    @RequestMapping("/deleteFile/captcha")
+    public void captcha(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        if (!ConfigConstants.getDeleteCaptcha()) {
+            return;
+        }
+
+        response.setContentType("image/jpeg");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setDateHeader("Expires", -1);
+        String captchaCode = WebUtils.getSessionAttr(request, CAPTCHA_CODE);
+        long captchaGenerateTime = WebUtils.getLongSessionAttr(request, CAPTCHA_GENERATE_TIME);
+        long timeDifference = DateUtils.calculateCurrentTimeDifference(captchaGenerateTime);
+
+        // 验证码为空，且生成验证码超过50秒，重新生成验证码
+        if (timeDifference > 50 && ObjectUtils.isEmpty(captchaCode)) {
+            captchaCode = CaptchaUtil.generateCaptchaCode();
+            // 更新验证码
+            WebUtils.setSessionAttr(request, CAPTCHA_CODE, captchaCode);
+            WebUtils.setSessionAttr(request, CAPTCHA_GENERATE_TIME, DateUtils.getCurrentSecond());
+        } else {
+            captchaCode = ObjectUtils.isEmpty(captchaCode) ? "wait" : captchaCode;
+        }
+
+        ServletOutputStream outputStream = response.getOutputStream();
+        ImageIO.write(CaptchaUtil.generateCaptchaPic(captchaCode), "jpeg", outputStream);
+        outputStream.close();
+    }
+
     @GetMapping("/listFiles")
     public List<Map<String, String>> getFiles() {
         List<Map<String, String>> list = new ArrayList<>();
@@ -70,6 +138,70 @@ public class FileController {
             });
         }
         return list;
+    }
+
+    /**
+     * 上传文件前校验
+     *
+     * @param file 文件
+     * @return 校验结果
+     */
+    private ReturnResponse<Object> fileUploadCheck(MultipartFile file) {
+        if (ConfigConstants.getFileUploadDisable()) {
+            return ReturnResponse.failure("文件传接口已禁用");
+        }
+        String fileName = WebUtils.getFileNameFromMultipartFile(file);
+        if (fileName.lastIndexOf(".") == -1) {
+            return ReturnResponse.failure("不允许上传的类型");
+        }
+        if (!KkFileUtils.isAllowedUpload(fileName)) {
+            return ReturnResponse.failure("不允许上传的文件类型: " + fileName);
+        }
+        if (KkFileUtils.isIllegalFileName(fileName)) {
+            return ReturnResponse.failure("不允许上传的文件名: " + fileName);
+        }
+        // 判断是否存在同名文件
+        if (existsFile(fileName)) {
+            return ReturnResponse.failure("存在同名文件，请先删除原有文件再次上传");
+        }
+        return ReturnResponse.success(fileName);
+    }
+
+
+    /**
+     * 删除文件前校验
+     *
+     * @param fileName 文件名
+     * @return 校验结果
+     */
+    private ReturnResponse<Object> deleteFileCheck(HttpServletRequest request, String fileName, String password) {
+        if (ObjectUtils.isEmpty(fileName)) {
+            return ReturnResponse.failure("文件名为空，删除失败！");
+        }
+        try {
+            fileName = WebUtils.decodeUrl(fileName);
+        } catch (Exception ex) {
+            String errorMsg = String.format(BASE64_DECODE_ERROR_MSG, fileName);
+            return ReturnResponse.failure(errorMsg + "删除失败！");
+        }
+        assert fileName != null;
+        if (fileName.contains("/")) {
+            fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+        }
+        if (KkFileUtils.isIllegalFileName(fileName)) {
+            return ReturnResponse.failure("非法文件名，删除失败！");
+        }
+        if (ObjectUtils.isEmpty(password)) {
+            return ReturnResponse.failure("密码 or 验证码为空，删除失败！");
+        }
+
+        String expectedPassword = ConfigConstants.getDeleteCaptcha() ? WebUtils.getSessionAttr(request, CAPTCHA_CODE) : ConfigConstants.getPassword();
+
+        if (!password.equalsIgnoreCase(expectedPassword)) {
+            logger.error("删除文件【{}】失败，密码错误！", fileName);
+            return ReturnResponse.failure("删除文件失败，密码错误！");
+        }
+        return ReturnResponse.success(fileName);
     }
 
     @GetMapping("/directory")
@@ -88,197 +220,8 @@ public class FileController {
         return RarUtils.getTree(fileUrl);
     }
 
-    /**
-     * 文件上传接口
-     * @author ZHANGCHAO
-     * @param file 上传的文件
-     * @return 响应结果
-     */
-    @PostMapping("/fileUpload")
-    public ReturnResponse<Object> fileUpload(@RequestParam("file") MultipartFile file) {
-        logger.info("上传文件：{}", file.getOriginalFilename());
-        
-        // 检查文件是否为空
-        if (file.isEmpty()) {
-            return ReturnResponse.failure("文件不能为空");
-        }
-        
-        // 获取文件名
-        String fileName = WebUtils.getFileNameFromMultipartFile(file);
-        
-        // 检查文件名是否非法
-        if (KkFileUtils.isIllegalFileName(fileName)) {
-            return ReturnResponse.failure("不允许上传的文件名");
-        }
-        
-        // 检查文件扩展名是否在禁止列表中
-        String fileType = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-        String[] prohibitArr = ConfigConstants.getProhibit();
-        for (String prohibit : prohibitArr) {
-            if (prohibit.equalsIgnoreCase(fileType)) {
-                return ReturnResponse.failure("不允许上传 " + fileType + " 类型的文件");
-            }
-        }
-        
-        try {
-            // 创建demo目录，获取规范化的绝对路径
-            File demoFolder = new File(fileDir + demoPath).getAbsoluteFile().getCanonicalFile();
-            if (!demoFolder.exists()) {
-                boolean created = demoFolder.mkdirs();
-                if (!created) {
-                    logger.error("创建目录失败：{}", demoFolder.getAbsolutePath());
-                    return ReturnResponse.failure("创建目录失败");
-                }
-            }
-            
-            // 生成唯一文件名（添加时间戳避免重复）
-            String originalFileName = fileName;
-            String fileNameWithoutExt = originalFileName.substring(0, originalFileName.lastIndexOf("."));
-            String ext = originalFileName.substring(originalFileName.lastIndexOf("."));
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-            String uniqueFileName = fileNameWithoutExt + "_" + sdf.format(new Date()) + ext;
-            
-            // 保存文件 - 使用规范化的绝对路径
-            File destFile = new File(demoFolder, uniqueFileName).getCanonicalFile();
-            logger.info("准备保存文件到：{}", destFile.getAbsolutePath());
-            
-            // 使用字节流直接写入文件
-            try (InputStream inputStream = file.getInputStream();
-                 OutputStream outputStream = Files.newOutputStream(destFile.toPath())) {
-                StreamUtils.copy(inputStream, outputStream);
-            }
-            
-            logger.info("文件上传成功：{}", destFile.getAbsolutePath());
-            return ReturnResponse.success("文件上传成功：" + uniqueFileName);
-        } catch (IOException e) {
-            logger.error("文件上传失败", e);
-            return ReturnResponse.failure("文件上传失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 删除文件接口
-     * @author ZHANGCHAO
-     * @param fileName 文件名（Base64编码）
-     * @param password 删除密码
-     * @param request HTTP请求
-     * @return 响应结果
-     */
-    @GetMapping("/deleteFile")
-    public ReturnResponse<Object> deleteFile(String fileName, String password, HttpServletRequest request) {
-        logger.info("删除文件请求：{}", fileName);
-        
-        // 检查是否需要验证码
-        if (ConfigConstants.getDeleteCaptcha()) {
-            // 从session获取验证码和生成时间
-            String captchaCode = (String) request.getSession().getAttribute(CAPTCHA_CODE);
-            Long captchaTime = (Long) request.getSession().getAttribute(CAPTCHA_GENERATE_TIME);
-            
-            // 验证验证码
-            if (ObjectUtils.isEmpty(captchaCode) || ObjectUtils.isEmpty(password)) {
-                return ReturnResponse.failure("删除文件失败，验证码错误！");
-            }
-            
-            // 检查验证码是否过期（5分钟）
-            if (System.currentTimeMillis() - captchaTime > 5 * 60 * 1000) {
-                return ReturnResponse.failure("删除文件失败，验证码已过期！");
-            }
-            
-            // 验证码不区分大小写
-            if (!captchaCode.equalsIgnoreCase(password)) {
-                return ReturnResponse.failure("删除文件失败，验证码错误！");
-            }
-            
-            // 清除session中的验证码
-            request.getSession().removeAttribute(CAPTCHA_CODE);
-            request.getSession().removeAttribute(CAPTCHA_GENERATE_TIME);
-        } else {
-            // 使用密码验证
-            if (!ConfigConstants.getPassword().equals(password)) {
-                return ReturnResponse.failure("删除文件失败，密码错误！");
-            }
-        }
-        
-        try {
-            // 解码文件名
-            String decodedFileName = WebUtils.decodeUrl(fileName);
-            
-            // 去除baseUrl前缀
-            String baseUrl = ConfigConstants.getBaseUrl();
-            if (decodedFileName.startsWith(baseUrl)) {
-                decodedFileName = decodedFileName.substring(baseUrl.length());
-            } else if (decodedFileName.startsWith("http://") || decodedFileName.startsWith("https://")) {
-                // 处理完整URL的情况
-                int index = decodedFileName.indexOf(demoDir);
-                if (index != -1) {
-                    decodedFileName = decodedFileName.substring(index);
-                }
-            }
-            
-            // 检查文件名是否非法
-            if (KkFileUtils.isIllegalFileName(decodedFileName)) {
-                return ReturnResponse.failure("不允许删除的文件路径");
-            }
-            
-            // 构建文件路径
-            String filePath = fileDir + decodedFileName;
-            File file = new File(filePath);
-            
-            // 检查文件是否存在
-            if (!file.exists()) {
-                return ReturnResponse.failure("文件不存在");
-            }
-            
-            // 检查文件是否在demo目录下
-            if (!file.getAbsolutePath().contains(demoPath)) {
-                return ReturnResponse.failure("只能删除demo目录下的文件");
-            }
-            
-            // 删除文件
-            if (file.delete()) {
-                logger.info("文件删除成功：{}", filePath);
-                return ReturnResponse.success("文件删除成功");
-            } else {
-                return ReturnResponse.failure("文件删除失败");
-            }
-        } catch (Exception e) {
-            logger.error("删除文件失败", e);
-            return ReturnResponse.failure("删除文件失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 生成删除文件验证码
-     * @author ZHANGCHAO
-     * @param request HTTP请求
-     * @param response HTTP响应
-     */
-    @GetMapping("/deleteFile/captcha")
-    public void captcha(HttpServletRequest request, HttpServletResponse response) {
-        try {
-            // 生成验证码
-            String captchaCode = CaptchaUtil.generateCaptchaCode();
-            
-            // 将验证码保存到session
-            request.getSession().setAttribute(CAPTCHA_CODE, captchaCode);
-            request.getSession().setAttribute(CAPTCHA_GENERATE_TIME, System.currentTimeMillis());
-            
-            // 生成验证码图片
-            BufferedImage image = CaptchaUtil.generateCaptchaPic(captchaCode);
-            
-            // 设置响应类型
-            response.setContentType("image/jpeg");
-            response.setHeader("Pragma", "no-cache");
-            response.setHeader("Cache-Control", "no-cache");
-            response.setDateHeader("Expires", 0);
-            
-            // 输出图片
-            ServletOutputStream out = response.getOutputStream();
-            ImageIO.write(image, "JPEG", out);
-            out.flush();
-            out.close();
-        } catch (IOException e) {
-            logger.error("生成验证码失败", e);
-        }
+    private boolean existsFile(String fileName) {
+        File file = new File(fileDir + demoPath + fileName);
+        return file.exists();
     }
 }

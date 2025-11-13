@@ -10,7 +10,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
 
-import javax.servlet.*;
+import jakarta.servlet.*;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -35,23 +35,13 @@ public class TrustDirFilter implements Filter {
             byte[] bytes = FileCopyUtils.copyToByteArray(classPathResource.getInputStream());
             this.notTrustDirView = new String(bytes, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("加载notTrustDir.html失败", e);
         }
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         String url = WebUtils.getSourceUrl(request);
-        
-        // 如果 URL 仍然是 URL 编码的，需要先解码
-        if (url != null && url.contains("%")) {
-            try {
-                url = URLDecoder.decode(url, "UTF-8");
-            } catch (Exception e) {
-                logger.error("TrustDirFilter - URL解码失败", e);
-            }
-        }
-        
         if (!allowPreview(url)) {
             response.getWriter().write(this.notTrustDirView);
             response.getWriter().close();
@@ -68,9 +58,8 @@ public class TrustDirFilter implements Filter {
     private boolean allowPreview(String urlPath) {
         //判断URL是否合法
         if(!StringUtils.hasText(urlPath) || !WebUtils.isValidUrl(urlPath)) {
-            return false;
+            return false ;
         }
-        
         try {
             URL url = WebUtils.normalizedURL(urlPath);
             if ("file".equals(url.getProtocol().toLowerCase(Locale.ROOT))) {

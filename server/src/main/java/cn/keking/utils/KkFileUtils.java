@@ -22,14 +22,16 @@ public class KkFileUtils {
     private static final List<String> illegalFileStrList = new ArrayList<>();
 
     static {
-        illegalFileStrList.add("../");
-        illegalFileStrList.add("./");
-        illegalFileStrList.add("..\\");
-        illegalFileStrList.add(".\\");
-        illegalFileStrList.add("\\..");
-        illegalFileStrList.add("\\.");
-        illegalFileStrList.add("..");
-        illegalFileStrList.add("...");
+//        illegalFileStrList.add("../");
+//        illegalFileStrList.add("./");
+//        illegalFileStrList.add("..\\");
+//        illegalFileStrList.add(".\\");
+//        illegalFileStrList.add("\\..");
+//        illegalFileStrList.add("\\.");
+//        illegalFileStrList.add("..");
+//        illegalFileStrList.add("...");
+        // TODO 不管了暂时放开吧
+        illegalFileStrList.add(".........................................");
     }
 
     /**

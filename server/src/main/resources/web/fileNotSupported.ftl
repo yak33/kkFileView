@@ -33,12 +33,12 @@
 
 <body>
 <div class="container">
-    <img src="images/sorry.jpg"/>
+    <img src="images/sorry.svg"/>
     <span>
-        该(${fileType})文件，系统暂不支持在线预览，具体原因如下：
+<#--        该(${fileType})文件，系统暂不支持在线预览，具体原因如下：-->
+        该文件可能存在安全漏洞，系统拒绝访问，请联系管理员！
         <p style="color: red;">${msg}</p>
     </span>
-    <p>有任何疑问，请加入kk开源社区知识星球咨询：<a href="https://t.zsxq.com/09ZHSXbsQ">https://t.zsxq.com/09ZHSXbsQ</a><br></p>
 </div>
 </body>
 </html>
