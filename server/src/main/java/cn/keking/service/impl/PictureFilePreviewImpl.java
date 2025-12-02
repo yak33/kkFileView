@@ -30,9 +30,12 @@ public class PictureFilePreviewImpl extends CommonPreviewImpl {
         List<String> imgUrls = new ArrayList<>();
         imgUrls.add(url);
         String compressFileKey = fileAttribute.getCompressFileKey();
-        List<String> zipImgUrls = fileHandlerService.getImgCache(compressFileKey);
-        if (!CollectionUtils.isEmpty(zipImgUrls)) {
-            imgUrls.addAll(zipImgUrls);
+        // 修复：只有当 compressFileKey 不为 null 时才查询 Redis 缓存
+        if (compressFileKey != null) {
+            List<String> zipImgUrls = fileHandlerService.getImgCache(compressFileKey);
+            if (!CollectionUtils.isEmpty(zipImgUrls)) {
+                imgUrls.addAll(zipImgUrls);
+            }
         }
         // 不是http开头，浏览器不能直接访问，需下载到本地
         super.filePreviewHandle(url, model, fileAttribute);

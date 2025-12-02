@@ -58,6 +58,9 @@ public class CacheServiceRedisImpl implements CacheService {
 
     @Override
     public String getPDFCache(String key) {
+        if (key == null) {
+            return null;
+        }
         RMapCache<String, String> convertedList = redissonClient.getMapCache(FILE_PREVIEW_PDF_KEY);
         return convertedList.get(key);
     }
@@ -69,12 +72,18 @@ public class CacheServiceRedisImpl implements CacheService {
 
     @Override
     public List<String> getImgCache(String key) {
+        if (key == null) {
+            return null;
+        }
         RMapCache<String, List<String>> convertedList = redissonClient.getMapCache(FILE_PREVIEW_IMGS_KEY);
         return convertedList.get(key);
     }
 
     @Override
     public Integer getPdfImageCache(String key) {
+        if (key == null) {
+            return null;
+        }
         RMapCache<String, Integer> convertedList = redissonClient.getMapCache(FILE_PREVIEW_PDF_IMGS_KEY);
         return convertedList.get(key);
     }
@@ -98,6 +107,9 @@ public class CacheServiceRedisImpl implements CacheService {
 
     @Override
     public String getMediaConvertCache(String key) {
+        if (key == null) {
+            return null;
+        }
         RMapCache<String, String> convertedList = redissonClient.getMapCache(FILE_PREVIEW_MEDIA_CONVERT_KEY);
         return convertedList.get(key);
     }
