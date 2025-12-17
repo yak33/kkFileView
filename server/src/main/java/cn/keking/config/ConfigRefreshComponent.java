@@ -4,11 +4,13 @@ import cn.keking.utils.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.yaml.snakeyaml.Yaml;
 
 import jakarta.annotation.PostConstruct;
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -83,9 +85,11 @@ public class ConfigRefreshComponent {
                 int pdfTimeout200;
                 int pdfThread;
                 while (true) {
-                    FileReader fileReader = new FileReader(configFilePath);
-                    BufferedReader bufferedReader = new BufferedReader(fileReader);
-                    properties.load(bufferedReader);
+                    try (InputStream inputStream = new FileInputStream(configFilePath)) {
+                        Yaml yaml = new Yaml();
+                        Map<String, Object> yamlMap = yaml.load(inputStream);
+                        flattenYamlMap("", yamlMap, properties);
+                    }
                     ConfigUtils.restorePropertiesFromEnvFormat(properties);
                     cacheEnabled = Boolean.parseBoolean(properties.getProperty("cache.enabled", ConfigConstants.DEFAULT_CACHE_ENABLED));
                     text = properties.getProperty("simText", ConfigConstants.DEFAULT_TXT_TYPE);
@@ -182,8 +186,6 @@ public class ConfigRefreshComponent {
                     ConfigConstants.setPdfTimeout200Value(pdfTimeout200);
                     ConfigConstants.setPdfThreadValue(pdfThread);
                     setWatermarkConfig(properties);
-                    bufferedReader.close();
-                    fileReader.close();
                     TimeUnit.SECONDS.sleep(1);
                 }
             } catch (IOException | InterruptedException e) {
@@ -212,7 +214,22 @@ public class ConfigRefreshComponent {
             WatermarkConfigConstants.setWatermarkWidthValue(watermarkWidth);
             WatermarkConfigConstants.setWatermarkHeightValue(watermarkHeight);
             WatermarkConfigConstants.setWatermarkAngleValue(watermarkAngle);
+        }
 
+        @SuppressWarnings("unchecked")
+        private void flattenYamlMap(String prefix, Map<String, Object> map, Properties properties) {
+            if (map == null) {
+                return;
+            }
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
+                Object value = entry.getValue();
+                if (value instanceof Map) {
+                    flattenYamlMap(key, (Map<String, Object>) value, properties);
+                } else if (value != null) {
+                    properties.setProperty(key, value.toString());
+                }
+            }
         }
     }
 }

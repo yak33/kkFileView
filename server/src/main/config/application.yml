@@ -1,0 +1,269 @@
+####################################### 应用程序配置 #######################################
+server:
+  port: ${KK_SERVER_PORT:8012}
+  servlet:
+    context-path: ${KK_CONTEXT_PATH:/}
+    encoding:
+      charset: utf-8
+  # 开启GZIP压缩
+  compression:
+    enabled: true
+    # 只有响应大于等于2048才压缩
+    min-response-size: 2048
+    # 压缩类型
+    mime-types: application/javascript,text/css,application/json,application/xml,text/html,text/xml,text/plain,font/woff,application/font-woff,font/eot,image/svg+xml,image/x-icon
+
+spring:
+  servlet:
+    multipart:
+      # 文件上传大小限制
+      max-file-size: 500MB
+      # 请求大小限制
+      max-request-size: 500MB
+  # Freemarker 配置
+  freemarker:
+    template-loader-path: classpath:/web/
+    cache: false
+    charset: UTF-8
+    check-template-location: true
+    content-type: text/html
+    expose-request-attributes: true
+    expose-session-attributes: true
+    request-context-attribute: request
+    suffix: .ftl
+  # redis连接地址，当cache.type = redis时生效
+  redisson:
+    address: ${KK_SPRING_REDISSON_ADDRESS:redis://47.94.52.54:6379}
+    password: ${KK_SPRING_REDISSON_PASSWORD:}
+
+# Spring Boot Actuator 端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点
+        include: health,info,metrics
+  endpoint:
+    health:
+      # 详细健康信息显示模式，可选值：never,when-authorized,always
+      show-details: always
+  health:
+    defaults:
+      # 启用默认健康指标
+      enabled: true
+
+# office配置
+office:
+  # openoffice或LibreOffice home路径
+  # office.home = C:\\Program Files (x86)\\OpenOffice 4
+  home: ${KK_OFFICE_HOME:default}
+  plugin:
+    server:
+      # office转换服务端口，多个用逗号分隔
+      ports: 2001,2002
+    task:
+      # office 转换 task 超时时间
+      timeout: 5m
+      # 每个office进程最大同时处理任务数，0表示不限制，超过此数量会启动新的进程
+      maxtasksperprocess: 200
+      # 单个任务执行超时时间，超过会终止任务并重启office进程
+      taskexecutiontimeout: 5m
+  # 是否开启office转图片分页功能 (1-5)
+  pagerange: ${KK_OFFICE_PAGERANGE:false}
+  # 是否开启office转图片水印功能 (kkFileView)
+  watermark: ${KK_OFFICE_WATERMARK:false}
+  # OFFICE JPEG质量
+  quality: ${KK_OFFICE_QUALITY:80}
+  # 图像分辨率限制
+  maximageresolution: ${KK_OFFICE_MAXIMAGERESOLUTION:150}
+  # 导出书签
+  exportbookmarks: ${KK_OFFICE_EXPORTBOOKMARKS:true}
+  # 导出PDF注释
+  exportnotes: ${KK_OFFICE_EXPORTNOTES:true}
+  # 加密文档密码，用于解密加密的office文档(仅对加密文档有效)
+  documentopenpasswords: ${KK_OFFICE_DOCUMENTOPENPASSWORD:true}
+  # xlsx转html支持
+  type:
+    web: ${KK_OFFICE_TYPE_WEB:web}
+  preview:
+    # office预览类型(word ppt)默认为图片(image)还是pdf，图片模式可控制分页和水印
+    type: ${KK_OFFICE_PREVIEW_TYPE:pdf}
+    switch:
+      # 是否禁用office预览切换功能，false 表示不禁用 true 表示禁用
+      disabled: ${KK_OFFICE_PREVIEW_SWITCH_DISABLED:true}
+
+# 文件存储配置
+file:
+  # 文件下载目录，如需自定义必须为绝对路径
+  # file.dir = D:\\kkFileview\\
+  dir: ${KK_FILE_DIR:default}
+  upload:
+    # 是否禁用文件上传
+    disable: ${KK_FILE_UPLOAD_DISABLE:false}
+
+local:
+  preview:
+    # 本地预览临时文件存放目录，注意不要配置在file.dir目录下，避免被清空
+    # WINDOWS下示例 local.preview.dir = \\D:\\kkFileview\\1\\1.txt (不能包含冒号)
+    # LINUX下示例 local.preview.dir = /opt/1.txt (不能包含冒号)
+    # file 协议参考 https://datatracker.ietf.org/doc/html/rfc8089
+    dir: ${KK_LOCAL_PREVIEW_DIR:default}
+
+# 缓存配置
+cache:
+  # 是否启用缓存
+  enabled: ${KK_CACHE_ENABLED:true}
+  # 缓存实现类型，可选RocksDB(type = default)，Redis(type = redis)，内存(spring.redisson.address为空则使用内存) JDK 序列化(type = jdk)
+  type: ${KK_CACHE_TYPE:redis}
+  clean:
+    # 是否启用定时清理缓存，true 启用 false 关闭
+    enabled: ${KK_CACHE_CLEAN_ENABLED:false}
+    # 定时清理缓存的时间cron表达式，当cache.clean.enabled = true时生效，cron表达式参考 Quartz cron
+    cron: ${KK_CACHE_CLEAN_CRON:0 0 3 * * ?}
+
+####################################### 其他配置 #######################################
+# 基础url，用于拼接预览文件的完整路径，例如nginx代理的域名
+# base.url = https://file.keking.cn
+base:
+  url: ${KK_BASE_URL:default}
+
+# ========== 安全配置 ==========
+trust:
+  # 可信任主机列表，多个用','分隔
+  # 注意：配置此项可防止SSRF漏洞攻击
+  # 注意：配置时请确认主机名不会被用户伪造
+  # 示例：trust.host = kkview.cn,yourdomain.com,cdn.example.com
+  # 允许所有主机访问（不推荐）trust.host = *
+  host: ${KK_TRUST_HOST:127.0.0.1,localhost,124.128.244.172}
+
+not:
+  trust:
+    # 不受信任的主机列表，多个用','分隔
+    # 配置此项可以排除某些主机不受信任的情况
+    # 配置此项时请务必小心，避免排除了重要的安全限制
+    # not.trust.host = localhost,127.0.0.1,0.0.0.0,192.168.*,10.*,172.16.*
+    host: ${KK_NOT_TRUST_HOST:default}
+
+# 纯文本类型列表
+simText: ${KK_SIMTEXT:txt,html,htm,asp,jsp,xml,json,properties,md,gitignore,log,java,py,c,cpp,sql,sh,bat,m,bas,prg,cmd}
+
+# FTP配置
+ftp:
+  # 登录FTP服务器的用户名，ftp url中若未指定ftp.username=ftpuser则使用此默认配置
+  username: ${KK_FTP_USERNAME:ftpuser}
+  # 登录FTP服务器的密码，ftp url中若未指定ftp.password=123456则使用此默认配置
+  password: ${KK_FTP_PASSWORD:123456}
+  control:
+    # FTP客户端控制编码，ftp url中若未指定ftp.control.encoding=UTF-8则使用此默认配置
+    encoding: ${KK_FTP_CONTROL_ENCODING:UTF-8}
+
+# 媒体类型配置
+# 支持的媒体类型列表
+media: ${KK_MEDIA:mp3,wav,mp4,flv,mpd,m3u8,ts,mpeg,m4a}
+# 需要转换的媒体类型
+convertMedias: ${KK_CONVERTMEDIAS:avi,mov,wmv,mkv,3gp,rm}
+
+# 禁用转换的媒体类型列表，如avi,mov,wmv,3gp,rm等
+# 注意：这些格式可能需要额外的编解码器支持，且转换可能消耗大量资源和时间
+# 建议只启用真正需要的格式转换功能
+media.convert.disable: ${KK_MEDIA_CONVERT_DISABLE:false}
+
+# PDF转换配置
+pdf2jpg:
+  # PDF转图片时的dpi设置，影响清晰度和文件大小
+  dpi: ${KK_PDF2JPG_DPI:144}
+
+pdf:
+  # PDF转换超时时间 (小于50页) 单位秒
+  timeout: ${KK_pdf_TIMEOUT:90}
+  # PDF转换超时时间 (50页到200页)
+  timeout80: ${KK_PDF_TIMEOUT80:180}
+  # PDF转换超时时间 (大于200页)
+  timeout200: ${KK_PDF_TIMEOUT200:300}
+  # PDF转换线程数
+  thread: ${KK_PDF_THREAD:5}
+  presentationMode:
+    # 禁用演示模式
+    disable: ${KK_PDF_PRESENTATION_MODE_DISABLE:true}
+  openFile:
+    # 禁用打开文件按钮
+    disable: ${KK_PDF_OPEN_FILE_DISABLE:true}
+  print:
+    # 禁用打印pdf按钮
+    disable: ${KK_PDF_PRINT_DISABLE:true}
+  download:
+    # 禁用下载pdf按钮
+    disable: ${KK_PDF_DOWNLOAD_DISABLE:true}
+  bookmark:
+    # 禁用bookmark
+    disable: ${KK_PDF_BOOKMARK_DISABLE:true}
+  disable:
+    # 禁止编辑
+    editing: ${KK_PDF_DISABLE_EDITING:false}
+
+# 水印配置
+watermark:
+  # 水印文字，如 watermark.txt = ${WATERMARK_TXT:这是水印文字}
+  # 如需取消水印文字，配置为 watermark.txt = ${WATERMARK_TXT:}
+  txt: ${WATERMARK_TXT:}
+  x:
+    # 水印x间距
+    space: ${WATERMARK_X_SPACE:10}
+  y:
+    # 水印y间距
+    space: ${WATERMARK_Y_SPACE:10}
+  # 水印字体
+  font: ${WATERMARK_FONT:微软雅黑}
+  # 水印字体大小
+  fontsize: ${WATERMARK_FONTSIZE:18px}
+  # 水印颜色
+  color: ${WATERMARK_COLOR:black}
+  # 水印透明度，取值范围 0.005 到 1
+  alpha: ${WATERMARK_ALPHA:0.2}
+  # 水印宽度
+  width: ${WATERMARK_WIDTH:180}
+  # 水印高度
+  height: ${WATERMARK_HEIGHT:80}
+  # 水印倾斜角度，取值范围 0 到 90
+  angle: ${WATERMARK_ANGLE:10}
+
+# 首页配置
+# 备案信息
+beian: ${KK_BEIAN:default}
+# 禁止预览的文件后缀
+prohibit: ${KK_PROHIBIT:exe,dll,dat}
+
+delete:
+  # 删除文件时是否需要验证码
+  captcha: ${KK_DELETE_CAPTCHA:false}
+  # 删除文件密码
+  password: ${KK_DELETE_PASSWORD:123456}
+  source:
+    # 是否删除源文件，对于OFFICE、CAD、TIFF等需要转换的文件有效
+    file: ${KK_DELETE_SOURCE_FILE:true}
+
+home:
+  # 首页默认页码
+  pagenumber: ${DEFAULT_HOME_PAGENUMBER:1}
+  # 首页是否分页
+  pagination: ${DEFAULT_HOME_PAGINATION:true}
+  # 首页每页条数
+  pagesize: ${DEFAULT_HOME_PAGSIZE:15}
+  # 首页是否搜索
+  search: ${DEFAULT_HOME_SEARCH:true}
+
+# Tif预览配置
+tif:
+  preview:
+    # Tif预览类型，可选tif(原生js渲染)、jpg(jpg序列图)、pdf(pdf文档)
+    type: ${KK_TIF_PREVIEW_TYPE:tif}
+
+# Cad预览配置
+cad:
+  preview:
+    # Cad预览类型，可选svg(原生js渲染)、pdf(pdf文档)
+    type: ${KK_CAD_PREVIEW_TYPE:svg}
+  # Cad转换超时时间
+  timeout: ${KK_CAD_TIMEOUT:90}
+  # Cad转换线程数
+  thread: ${KK_CAD_THREAD:5}
