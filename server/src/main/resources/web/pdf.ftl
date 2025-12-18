@@ -23,10 +23,24 @@
 <script type="text/javascript">
     var url = '${finalUrl}';
     var baseUrl = '${baseUrl}'.endsWith('/') ? '${baseUrl}' : '${baseUrl}' + '/';
+    var originFileName = '${(file.name!"")?js_string}';
+    var downloadFileName = (function (fileName) {
+        if (!fileName) {
+            return "document.pdf";
+        }
+        if (/\.pdf$/i.test(fileName)) {
+            return fileName;
+        }
+        var dotIndex = fileName.lastIndexOf(".");
+        var baseName = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+        return (baseName || "document") + ".pdf";
+    })(originFileName);
     if (!url.startsWith(baseUrl)) {
         url = baseUrl + 'getCorsFile?urlPath=' + encodeURIComponent(Base64.encode(url));
     }
-    document.getElementsByTagName('iframe')[0].src = "${baseUrl}pdfjs/web/viewer.html?file=" + encodeURIComponent(url) + "&disablepresentationmode=${pdfPresentationModeDisable}&disableopenfile=${pdfOpenFileDisable}&disableprint=${pdfPrintDisable}&disabledownload=${pdfDownloadDisable}&disablebookmark=${pdfBookmarkDisable}&disableediting=${pdfDisableEditing}";
+    document.getElementsByTagName('iframe')[0].src = "${baseUrl}pdfjs/web/viewer.html?file=" + encodeURIComponent(url)
+        + "&filename=" + encodeURIComponent(downloadFileName)
+        + "&disablepresentationmode=${pdfPresentationModeDisable}&disableopenfile=${pdfOpenFileDisable}&disableprint=${pdfPrintDisable}&disabledownload=${pdfDownloadDisable}&disablebookmark=${pdfBookmarkDisable}&disableediting=${pdfDisableEditing}&inkautocommit=${inkAutoCommit}";
     document.getElementsByTagName('iframe')[0].height = document.documentElement.clientHeight - 10;
     /**
      * 页面变化调整高度

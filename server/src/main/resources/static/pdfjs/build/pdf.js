@@ -21274,6 +21274,10 @@ class InkEditor extends _editor.AnnotationEditor {
       this.canvas.removeEventListener("contextmenu", this.#boundCanvasContextMenu);
     }, 10);
     this.#stopDrawing(event.offsetX, event.offsetY);
+    if (globalThis.__KKFILEVIEW_PDFJS_INK_AUTOCOMMIT__) {
+      this.commit();
+      return;
+    }
     this.addToAnnotationStorage();
     this.setInBackground();
   }

@@ -2035,6 +2035,8 @@ const PDFViewerApplication = {
     let disableDownload;
     let disableBookmark;
     let disableEditing;
+    let inkAutoCommit;
+    let preferredFilename;
     const queryString = document.location.search.substring(1);
     const params = (0, _ui_utils.parseQueryString)(queryString);
     file = params.get("file") ?? _app_options.AppOptions.get("defaultUrl");
@@ -2044,6 +2046,12 @@ const PDFViewerApplication = {
     disableDownload = params.get("disabledownload") ?? 'false';
     disableBookmark = params.get("disablebookmark") ?? 'false';
     disableEditing = params.get("disableediting") ?? 'false';
+    inkAutoCommit = params.get("inkautocommit") ?? "false";
+    globalThis.__KKFILEVIEW_PDFJS_INK_AUTOCOMMIT__ = inkAutoCommit === "true" || inkAutoCommit === "1";
+    preferredFilename = (params.get("filename") ?? "").replace(/[/\\\\]/g, "_").replace(/\\r|\\n/g, "").trim();
+    if (preferredFilename) {
+      this._contentDispositionFilename = preferredFilename;
+    }
     validateFileURL(file);
     const fileInput = appConfig.openFileInput;
     fileInput.value = null;

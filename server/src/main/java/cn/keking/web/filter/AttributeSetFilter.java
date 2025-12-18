@@ -38,6 +38,12 @@ public class AttributeSetFilter implements Filter {
         request.setAttribute("pdfDownloadDisable", ConfigConstants.getPdfDownloadDisable());
         request.setAttribute("pdfBookmarkDisable", ConfigConstants.getPdfBookmarkDisable());
         request.setAttribute("pdfDisableEditing", ConfigConstants.getPdfDisableEditing());
+        String inkAutoCommit = httpRequest.getParameter("inkAutoCommit");
+        if (inkAutoCommit == null || inkAutoCommit.trim().isEmpty()) {
+            inkAutoCommit = httpRequest.getParameter("inkautocommit");
+        }
+        boolean enableInkAutoCommit = "true".equalsIgnoreCase(inkAutoCommit) || "1".equals(inkAutoCommit);
+        request.setAttribute("inkAutoCommit", enableInkAutoCommit ? "true" : "false");
         request.setAttribute("switchDisabled", ConfigConstants.getOfficePreviewSwitchDisabled());
         request.setAttribute("fileUploadDisable", ConfigConstants.getFileUploadDisable());
         request.setAttribute("beian", ConfigConstants.getBeian());
