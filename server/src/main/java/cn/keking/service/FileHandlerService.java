@@ -541,6 +541,17 @@ public class FileHandlerService implements InitializingBean {
             String kkProxyAuthorization = req.getHeader("kk-proxy-authorization");
             attribute.setKkProxyAuthorization(kkProxyAuthorization);
 
+            // 支持前端通过参数控制 isHtmlView（优先级高于配置）
+            String isHtmlViewParam = req.getParameter("isHtmlView");
+            if (StringUtils.hasText(isHtmlViewParam)) {
+                boolean newIsHtmlView = "true".equalsIgnoreCase(isHtmlViewParam);
+                attribute.setHtmlView(newIsHtmlView);
+                // 重新计算缓存文件名（因为 isHtmlView 影响生成的文件后缀）
+                String newCacheFileName = this.getCacheFileName(type, originFileName, cacheFilePrefixName, newIsHtmlView, isCompressFile);
+                attribute.setCacheName(newCacheFileName);
+                attribute.setOutFilePath(fileDir + newCacheFileName);
+            }
+
         }
 
         return attribute;

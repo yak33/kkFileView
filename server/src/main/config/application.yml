@@ -190,13 +190,13 @@ pdf:
     disable: ${KK_PDF_OPEN_FILE_DISABLE:true}
   print:
     # 禁用打印pdf按钮
-    disable: ${KK_PDF_PRINT_DISABLE:true}
+    disable: ${KK_PDF_PRINT_DISABLE:false}
   download:
     # 禁用下载pdf按钮
-    disable: ${KK_PDF_DOWNLOAD_DISABLE:true}
+    disable: ${KK_PDF_DOWNLOAD_DISABLE:false}
   bookmark:
     # 禁用bookmark
-    disable: ${KK_PDF_BOOKMARK_DISABLE:true}
+    disable: ${KK_PDF_BOOKMARK_DISABLE:false}
   disable:
     # 禁止编辑
     editing: ${KK_PDF_DISABLE_EDITING:false}

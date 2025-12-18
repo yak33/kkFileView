@@ -55,8 +55,10 @@ public class OfficeFilePreviewImpl implements FilePreview {
         boolean isHtmlView = fileAttribute.isHtmlView();  //xlsx  转换成html
         String cacheName = fileAttribute.getCacheName();  //转换后的文件名
         String outFilePath = fileAttribute.getOutFilePath();  //转换后生成文件的路径
+        // 只有当 isHtmlView=true 且配置为 web 时，xlsx/csv 才走特殊的 web 预览页面
+        // 当前端传 isHtmlView=false 时，强制走 PDF 预览（支持标注功能）
         if (!officePreviewType.equalsIgnoreCase("html")) {
-            if (ConfigConstants.getOfficeTypeWeb() .equalsIgnoreCase("web")) {
+            if (isHtmlView && ConfigConstants.getOfficeTypeWeb().equalsIgnoreCase("web")) {
                 if (suffix.equalsIgnoreCase("xlsx")) {
                     model.addAttribute("pdfUrl", KkFileUtils.htmlEscape(url)); //特殊符号处理
                     return XLSX_FILE_PREVIEW_PAGE;
@@ -68,11 +70,11 @@ public class OfficeFilePreviewImpl implements FilePreview {
             }
         }
         if (forceUpdatedCache|| !fileHandlerService.listConvertedFiles().containsKey(cacheName) || !ConfigConstants.isCacheEnabled()) {
-        // 下载远程文件到本地，如果文件在本地已存在不会重复下载
-        ReturnResponse<String> response = DownloadUtils.downLoad(fileAttribute, fileName);
-        if (response.isFailure()) {
-            return otherFilePreview.notSupportedFile(model, fileAttribute, response.getMsg());
-        }
+            // 下载远程文件到本地，如果文件在本地已存在不会重复下载
+            ReturnResponse<String> response = DownloadUtils.downLoad(fileAttribute, fileName);
+            if (response.isFailure()) {
+                return otherFilePreview.notSupportedFile(model, fileAttribute, response.getMsg());
+            }
             String filePath = response.getContent();
             boolean  isPwdProtectedOffice =  OfficeUtils.isPwdProtected(filePath);    // 判断是否加密文件
             if (isPwdProtectedOffice && !StringUtils.hasLength(filePassword)) {
