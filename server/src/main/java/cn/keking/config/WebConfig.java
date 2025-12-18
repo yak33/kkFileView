@@ -3,7 +3,10 @@ package cn.keking.config;
 import cn.keking.web.filter.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.server.MimeMappings;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -28,6 +31,19 @@ public class WebConfig implements WebMvcConfigurer {
         String filePath = ConfigConstants.getFileDir();
         LOGGER.info("Add resource locations: {}", filePath);
         registry.addResourceHandler("/**").addResourceLocations("classpath:/META-INF/resources/","classpath:/resources/","classpath:/static/","classpath:/public/","file:" + filePath);
+    }
+
+    /**
+     * PDF.js v5+ 采用 ESM（.mjs）与 WebAssembly（.wasm），需显式补齐 MIME 映射，避免浏览器拒绝加载。
+     */
+    @Bean
+    public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> pdfjsMimeMappingsCustomizer() {
+        return factory -> {
+            MimeMappings mappings = new MimeMappings(MimeMappings.DEFAULT);
+            mappings.add("mjs", "application/javascript");
+            mappings.add("wasm", "application/wasm");
+            factory.setMimeMappings(mappings);
+        };
     }
 
 

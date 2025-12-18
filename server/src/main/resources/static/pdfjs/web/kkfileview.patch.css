@@ -1,0 +1,41 @@
+#toolbarViewer {
+  --kkfileview-toolbar-label-font-size: 12px;
+  --kkfileview-toolbar-label-padding-inline: 6px;
+  --kkfileview-toolbar-label-gap: 4px;
+}
+
+/* 只给“编辑相关”按钮显示文字，避免工具栏拥挤 */
+#toolbarViewer :is(#editorHighlightButton, #editorFreeTextButton, #editorInkButton, #editorStampButton) > span {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+#toolbarViewer :is(#editorHighlightButton, #editorFreeTextButton, #editorInkButton, #editorStampButton) {
+  display: inline-flex;
+  width: auto;
+  aspect-ratio: auto;
+  font-size: var(--kkfileview-toolbar-label-font-size);
+  padding-inline: var(--kkfileview-toolbar-label-padding-inline);
+  gap: var(--kkfileview-toolbar-label-gap);
+  justify-content: flex-start;
+}
+
+#toolbarViewer :is(#editorHighlight, #editorFreeText, #editorInk, #editorStamp) {
+  width: auto;
+  aspect-ratio: auto;
+}
+
+#toolbarViewer :is(#editorHighlight, #editorFreeText, #editorInk, #editorStamp) > .toolbarButton {
+  width: auto;
+}
+
+#toolbarViewer :is(#editorHighlightButton, #editorFreeTextButton, #editorInkButton, #editorStampButton) > span:empty {
+  display: none;
+}
+
+#toolbarViewer .dropdownToolbarButton > select {
+  font-size: var(--kkfileview-toolbar-label-font-size);
+}
