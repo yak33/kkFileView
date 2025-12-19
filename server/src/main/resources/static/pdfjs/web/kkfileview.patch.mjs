@@ -65,3 +65,41 @@ if (preferredFilename) {
   });
 }
 
+const patchAutoCommitBeforeSave = () => {
+  const app = globalThis.PDFViewerApplication;
+  if (!app || app.__KKFILEVIEW_PATCHED_AUTO_COMMIT__ === true) {
+    return false;
+  }
+
+  const commitActiveEditor = () => {
+    try {
+      app.pdfViewer?.annotationEditorUIManager?.commitOrRemove();
+    } catch {
+      // ignore
+    }
+  };
+
+  const wrap = fnName => {
+    const original = app[fnName];
+    if (typeof original !== "function") {
+      return;
+    }
+    app[fnName] = async function (...args) {
+      commitActiveEditor();
+      return original.apply(this, args);
+    };
+  };
+
+  wrap("downloadOrSave");
+  wrap("save");
+
+  app.__KKFILEVIEW_PATCHED_AUTO_COMMIT__ = true;
+  return true;
+};
+
+queueMicrotask(() => {
+  if (patchAutoCommitBeforeSave()) {
+    return;
+  }
+  setTimeout(patchAutoCommitBeforeSave, 0);
+});
