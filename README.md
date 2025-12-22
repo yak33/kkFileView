@@ -1,4 +1,5 @@
 # kkFileView
+### 20251218@ZHANGCHAOO 升级 PDF.js 组件最新版到 V5.4.449，增加高亮效果，默认 xlsx 默认使用 PDF 模式预览，以便于进行标注后留存文件。
 ### 20251011@ZHANGCHAO 已修改了部分源码解决了部分BUG。官方Docker镜像发布到中央仓库的比较老旧，只有4.1.0版本，最新版本镜像需自行构建。下方文档里已经写了如何构建基础镜像和应用镜像！
 文档在线预览项目解决方案。万能的文件预览开源项目，基本支持主流文档格式预览，如：
 1. 支持 doc, docx, xls, xlsx, xlsm, ppt, pptx, csv, tsv, dotm, xlt, xltm, dot, dotx,xlam, xla ,pages 等 Office 办公文档
